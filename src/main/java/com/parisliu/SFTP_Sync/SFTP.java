@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException; 
 import java.util.HashMap;
 import java.util.Vector;
- 
 
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonParseException;
@@ -30,8 +29,11 @@ public class SFTP {
 
 	private boolean savePassword = true; //whether save password in config file
 	private File path;
+	private java.util.Properties properties = new java.util.Properties(); 
 	
 	public SFTP (File path) throws JsonParseException, JsonMappingException, IOException {
+
+    	properties.put("StrictHostKeyChecking", "no");
 		this.path = path;
 		
 		if(!path.exists()) {
@@ -91,24 +93,35 @@ public class SFTP {
 		saveConfig();
 	}
 
+	/**
+	 * 
+	 * @return
+	 * 	0: connected
+	 * 	-1: wrong user or password
+	 * 	1: server problems
+	 * @throws JSchException
+	 */
     public boolean connect() throws JSchException { 
-    	String server = config.getServer(); 
 //    	String pass = config.getPassword();
-    	java.util.Properties properties = new java.util.Properties(); 
-    	properties.put("StrictHostKeyChecking", "no");
 
-    	
-    	while(true) {
+    	int fail = 0;//Number of failed connection attempts
+    	while(session == null || !session.isConnected()) {
         	String user = config.enterUser();
         	if(user.isEmpty()) {
-        		return false;
+    			System.out.println("Empty user name.");
+    			config.setPassword(null);
+    			config.setUser(null); 
+    			return false;
         	} 
 
     		String pass = config.enterPassword();
         	if(pass.isEmpty()) {
-        		return false;
+    			System.out.println("Empty password.");
+    			config.setPassword(null);
+    			config.setUser(null); 
+    			return false;
         	}
-        	session = jsch.getSession(user, server); 
+        	session = jsch.getSession(user, config.getServer()); 
         	session.setConfig(properties); 
         	session.setPassword(pass); 
 
@@ -117,7 +130,12 @@ public class SFTP {
         	
         	try {
         		session.connect();
-        		break;
+        		
+
+            	Channel channel = session.openChannel( "sftp" );
+            	channel.connect();
+            	sftpChannel = (ChannelSftp) channel;
+            	return true;
         	}
         	catch (com.jcraft.jsch.JSchException e) { //wrong password   
         		System.out.println(e.getMessage());
@@ -125,19 +143,26 @@ public class SFTP {
     			case "connection is closed by foreign host":
     				System.out.println("Server is not online.");
     				System.exit(0);
-    				default:
-    	    			System.out.println("Wrong user name or password. Try again.");
-    	    			config.setPassword(null);
-    	    			config.setUser(null); 
+    			case "Auth fail":
+	    			System.out.println("Wrong user name or password. Try again.");
+	    			config.setPassword(null);
+	    			config.setUser(null); 
+	    			break;
+				default://server problem
+					fail++;
+					try {
+						Thread.sleep(Math.min(10, fail)*60000);
+					} catch (InterruptedException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+					
     			}
         	}
         	
         	
     	}
 
-    	Channel channel = session.openChannel( "sftp" );
-    	channel.connect();
-    	sftpChannel = (ChannelSftp) channel;
     	return true;
     }
 
@@ -258,8 +283,6 @@ public class SFTP {
         							e.printStackTrace();
         						}
                     		}
-//                    		String fileUrl = url + "/" + file.getFilename();
-//                    		FileInfo info = fileInfo.get(fileUrl);
                     		if(info.getDownloadTimeStamp() == 0) {// not in the database, for corrupted info file
                     			if(output.exists()) { //local file exsit
                     				if(file.getAttrs().getSize()== output.length()) {//same file size
@@ -295,14 +318,8 @@ public class SFTP {
         		}//end of process a file
 
 
-//        			info.setLastModifiedTimeStamp(file.getAttrs().getMTime());
-//    				//info.setPermission(file.getAttrs().getPermissions());
-//    				info.setSize(file.getAttrs().getSize());
-//        			info.setDownloadTimeStamp(config.getTimestamp());
-//        			fileInfo.put(fileUrl, info); 
 
     			info.setLastModifiedTimeStamp(file.getAttrs().getMTime());
-				//info.setPermission(file.getAttrs().getPermissions());
 				info.setSize(file.getAttrs().getSize()); 
     			info.setDownloadTimeStamp(config.getTimestamp()); 
     			fileInfo.put(fileUrl, info);
