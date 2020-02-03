@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Vector;
 
+import org.parisliu.WinRAR.WinRAR;
+
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -26,7 +28,7 @@ public class SFTP {
 	private Session session;
 	private ChannelSftp sftpChannel; 
 	private JSch jsch = new JSch();
-
+	private WinRAR rar = null;
 	private boolean savePassword = true; //whether save password in config file
 	private File path;
 	private java.util.Properties properties = new java.util.Properties(); 
@@ -69,6 +71,36 @@ public class SFTP {
 	    }, "Shutdown-thread"));
 	}
 
+	public void archiveAllFiles() {
+		archiveFilesInFolder(new File(""));
+	}
+	private void archiveFilesInFolder(File folder) {
+		for(File file:folder.listFiles()) {
+			if(!file.getName().startsWith(".")) {
+				if(file.isDirectory()) {
+					archiveFilesInFolder(file);
+				}
+				else { 
+					if(!file.getName().equals("config.cfg")) {
+						archive(file);
+					}
+				}
+			}
+		}
+	}
+	private void archive(File output) {
+		try {
+			rar.compress(output).setCompressionMethodBest().setDeleteAfter(true).run();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	public void setWinRAR(String name) {
+		config.setWinRAR(name);
+	}
+
 	 
 	public void startNewTask() {
 		config.setNewTimestamp();
@@ -96,9 +128,8 @@ public class SFTP {
 	/**
 	 * 
 	 * @return
-	 * 	0: connected
-	 * 	-1: wrong user or password
-	 * 	1: server problems
+	 * 	true: connected
+	 * 	false: connection failed
 	 * @throws JSchException
 	 */
     public boolean connect() throws JSchException { 
@@ -125,7 +156,9 @@ public class SFTP {
         	session.setConfig(properties); 
         	session.setPassword(pass); 
 
-        	
+        	if(config.getWinRAR()!=null) {
+        		rar = new WinRAR(new File(config.getWinRAR()));
+        	}
         	
         	
         	try {
@@ -290,7 +323,7 @@ public class SFTP {
                     				}
                     			}
                     		}
-                    		if(info.getDownloadTimeStamp()==0 || !info.getDownloadTimeStamp().equals(config.getTimestamp())) {
+                    		if(!info.getDownloadTimeStamp().equals(config.getTimestamp())) {
                     			if(info.getDownloadTimeStamp()==0 || !info.getLastModifiedTimeStamp().equals(file.getAttrs().getMTime())) {
                     				if(info.isReadable()) {
                     					System.out.println("Downloading: " + output.getAbsolutePath());
@@ -301,6 +334,10 @@ public class SFTP {
                     	        				output.delete();
                     	        			}
                     						tmp.renameTo(output); 
+
+                    						archive(output);
+                    						
+                    						
                 							info.setDownloadTimeStamp(config.getTimestamp());
                     					} catch (SftpException e) {
                     						if(!tmp.exists()) {
@@ -340,6 +377,7 @@ public class SFTP {
 	public void printInfo() {
 		System.out.println("Server: " + config.getServer());
 		System.out.println("User: " + config.getUser());
+		System.out.println("WinRAR: " + config.getWinRAR());
 		System.out.println("Folder: " + config.getFolder());
 		System.out.println("Backup timestamp: " + config.getTimestamp());
 		System.out.println("Backup path: " + path.getAbsolutePath());

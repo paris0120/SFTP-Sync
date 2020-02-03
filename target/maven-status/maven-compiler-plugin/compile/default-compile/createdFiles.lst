@@ -2,6 +2,7 @@ com\parisliu\SFTP_Sync\SFTP.class
 com\parisliu\SFTP_Sync\App.class
 com\parisliu\SFTP_Sync\DownloadProgressMonitor.class
 com\parisliu\SFTP_Sync\FileInfo.class
+com\parisliu\SFTP_Sync\GUI.class
 com\parisliu\SFTP_Sync\SFTP$1.class
 com\parisliu\SFTP_Sync\SFTP$2.class
 com\parisliu\SFTP_Sync\Configuration.class

@@ -21,7 +21,20 @@ public class Configuration {
 	private String user; //user name
 	private String password; //password 
 	private String folder = ""; //remote download folder 
+	private String WinRAR = null;
 	private long timestamp;
+
+
+
+	public String getWinRAR() {
+		return WinRAR;
+	}
+
+
+
+	public void setWinRAR(String winRAR) {
+		WinRAR = winRAR;
+	}
 
 
 
