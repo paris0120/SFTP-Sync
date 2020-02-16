@@ -29,7 +29,6 @@ public class SFTP {
 	private ChannelSftp sftpChannel; 
 	private JSch jsch = new JSch();
 	private WinRAR rar = null;
-	private boolean savePassword = true; //whether save password in config file
 	private File path;
 	private java.util.Properties properties = new java.util.Properties(); 
 	
@@ -72,7 +71,7 @@ public class SFTP {
 	}
 
 	public void archiveAllFiles() {
-		archiveFilesInFolder(new File(""));
+		archiveFilesInFolder(new File(config.getFolder()));
 	}
 	private void archiveFilesInFolder(File folder) {
 		for(File file:folder.listFiles()) {
@@ -81,7 +80,7 @@ public class SFTP {
 					archiveFilesInFolder(file);
 				}
 				else { 
-					if(!file.getName().equals("config.cfg")) {
+					if(!file.getName().equals("config.cfg") && !file.getName().endsWith(".rar")) {
 						archive(file);
 					}
 				}
@@ -89,13 +88,24 @@ public class SFTP {
 		}
 	}
 	private void archive(File output) {
-		try {
-			rar.compress(output).setCompressionMethodBest().setDeleteAfter(true).run();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		if(rar!=null) {
+			try {
+				rar.compress(output).setCompressionMethodBest().setDeleteAfter(true).run();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
 		}
 		
+	}
+	
+	
+	public String getWinRAR() {
+		return config.getWinRAR();
 	}
 	public void setWinRAR(String name) {
 		config.setWinRAR(name);
@@ -158,6 +168,12 @@ public class SFTP {
 
         	if(config.getWinRAR()!=null) {
         		rar = new WinRAR(new File(config.getWinRAR()));
+        		if(!rar.hasRAR()) {
+        			rar=null;
+        		}
+        	}
+        	else {
+        		rar = null;
         	}
         	
         	
@@ -211,11 +227,11 @@ public class SFTP {
 	
 
 	public boolean isSavePassword() {
-		return savePassword;
+		return config.isSavePassword();
 	}
 	
 	public void setSavePassword(boolean savePassword) {
-		this.savePassword = savePassword;
+		this.config.setSavePassword(savePassword); 
 	}
 	
 	
@@ -378,7 +394,7 @@ public class SFTP {
 		System.out.println("Server: " + config.getServer());
 		System.out.println("User: " + config.getUser());
 		System.out.println("WinRAR: " + config.getWinRAR());
-		System.out.println("Folder: " + config.getFolder());
+		System.out.println("Backup Remote Folder: " + config.getFolder());
 		System.out.println("Backup timestamp: " + config.getTimestamp());
 		System.out.println("Backup path: " + path.getAbsolutePath());
 		

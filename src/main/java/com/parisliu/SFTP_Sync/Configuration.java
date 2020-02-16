@@ -21,8 +21,20 @@ public class Configuration {
 	private String user; //user name
 	private String password; //password 
 	private String folder = ""; //remote download folder 
-	private String WinRAR = null;
+	private String WinRAR = null; //WinRAR folder
 	private long timestamp;
+	private boolean savePassword = true; //whether save password in config file
+	
+	
+	public boolean isSavePassword() {
+		return savePassword;
+	}
+
+
+
+	public void setSavePassword(boolean savePassword) {
+		this.savePassword = savePassword;
+	}
 
 
 
