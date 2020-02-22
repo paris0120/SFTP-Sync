@@ -80,7 +80,7 @@ public class SFTP {
 					archiveFilesInFolder(file);
 				}
 				else { 
-					if(!file.getName().equals("config.cfg") && !file.getName().endsWith(".rar")) {
+					if(!file.getName().equals("config.cfg") && !file.getName().endsWith(".rar") && !file.getName().endsWith(".tmp")) {
 						archive(file);
 					}
 				}
